@@ -2,7 +2,7 @@
 
 Read-only explorer for the [VaultChain](https://github.com/VaultChainHQ/vaultchain) **devnet**. Next.js (App Router, TypeScript), no database, no secrets, no wallet. Deployable on Vercel as is.
 
-Related repositories: [vaultchain](https://github.com/VaultChainHQ/vaultchain) (the chain, provider and CLI) · **vaultchain-explorer** (this repo) · [vaultchain-upload](https://github.com/VaultChainHQ/vaultchain-upload) (browser-signing upload site).
+Related repositories: [vaultchain](https://github.com/VaultChainHQ/vaultchain) (the chain, provider and CLI) · **vaultchain-explorer** (this repo) · [vaultchain-upload](https://github.com/VaultChainHQ/vaultchain-upload) (browser-signing upload site). Also: [vaultchain-web](https://github.com/VaultChainHQ/vaultchain-web) (site, docs hub and a profile vault).
 
 ## Pages
 
