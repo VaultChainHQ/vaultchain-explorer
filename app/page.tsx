@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { LiveHeight } from "@/components/LiveHeight";
-import { Addr, Badge, Card, Empty, ErrorBox, Root } from "@/components/ui";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { SearchBox } from "@/components/SearchBox";
+import { Addr, Card, ErrorBox, Jargon, Stat } from "@/components/ui";
 import { getDeals, getManifests, getNodeInfo, getParams, getProofs, getProviderStatus, getProviders, settle } from "@/lib/api";
-import { fmtBytes, fmtVault } from "@/lib/format";
+import { fmtAgo, fmtBytes, vault } from "@/lib/format";
+import { networkHealth } from "@/lib/health";
+import { SITES } from "@/lib/links";
 
 export const dynamic = "force-dynamic";
 
@@ -16,86 +19,127 @@ export default async function Home() {
     settle(getProofs()),
     getProviderStatus(),
   ]);
+  const height = info.ok ? info.value.height : undefined;
+  const P = providers.ok ? providers.value : [];
+  const D = deals.ok ? deals.value : [];
+  const M = manifests.ok ? manifests.value : [];
+  const PR = proofs.ok ? proofs.value : [];
+  const health = networkHealth({ nodeUp: info.ok, providers: P, deals: D, height, params: params.ok ? params.value : undefined });
+  const open = D.filter((d) => d.status === "open").length;
+  const stored = M.reduce((n, m) => n + m.size, 0);
 
-  if (!info.ok) return <ErrorBox error={info.error} />;
-  const height = info.value.height;
+  type Ev = { h: number; text: React.ReactNode; to: string };
+  const events: Ev[] = [
+    ...M.map((m) => ({ h: m.height, to: `/files/${m.root}`, text: <>File added: <strong>{m.name || "unnamed file"}</strong> ({fmtBytes(m.size)})</> })),
+    ...D.map((d) => ({ h: d.start_height, to: `/deals/${d.id}`, text: <>Storage deal #{d.id} opened for {fmtBytes(d.size)}, paid {vault(d.payment.amount)}</> })),
+    ...PR.map((p) => ({ h: p.height, to: `/deals/${p.deal_id}`, text: <>A provider proved it still stores the file in deal #{p.deal_id}</> })),
+  ]
+    .sort((a, b) => b.h - a.h)
+    .slice(0, 8);
 
-  // The node has no block-listing endpoint, so "recent activity" is derived from on-chain records.
-  type Ev = { height: number; kind: string; node: React.ReactNode };
-  const events: Ev[] = [];
-  if (manifests.ok)
-    for (const m of manifests.value)
-      events.push({ height: m.height, kind: "manifest", node: <>{m.name || "(unnamed)"} committed ({fmtBytes(m.size)}) <Root r={m.root} /></> });
-  if (deals.ok)
-    for (const d of deals.value)
-      events.push({ height: d.start_height, kind: "deal", node: <>deal <Link href={`/deals/${d.id}`}>#{d.id}</Link> opened by <Addr a={d.owner} /></> });
-  if (proofs.ok)
-    for (const p of proofs.value)
-      events.push({ height: p.height, kind: "proof", node: <>proof for deal <Link href={`/deals/${p.deal_id}`}>#{p.deal_id}</Link> from <Addr a={p.provider} /> (chunk {p.chunk_index})</> });
-  events.sort((a, b) => b.height - a.height);
-
+  const icon = { ok: "✅", warn: "⚠️", bad: "⛔", idle: "•" }[health.level];
   return (
     <>
-      <div className="grid">
-        <Card title="Chain">
-          <p>
-            <span className="muted">Chain id</span> <b className="mono">{info.value.chainId}</b>
-          </p>
-          <p>
-            <span className="muted">Software</span> <span className="mono">vaultd {info.value.appVersion}</span> (timer consensus, devnet)
-          </p>
-          <LiveHeight initial={height} />
-        </Card>
-        <Card title="Network">
-          <p>
-            <span className="muted">Providers</span> <b>{providers.ok ? providers.value.length : "?"}</b> ({providers.ok ? providers.value.filter((p) => p.status === "active").length : "?"} active)
-          </p>
-          <p>
-            <span className="muted">Deals</span> <b>{deals.ok ? deals.value.length : "?"}</b> ({deals.ok ? deals.value.filter((d) => d.status === "open").length : "?"} open)
-          </p>
-          <p>
-            <span className="muted">Files (manifests)</span> <b>{manifests.ok ? manifests.value.length : "?"}</b>
-          </p>
-          <p>
-            <span className="muted">Proofs recorded</span> <b>{proofs.ok ? proofs.value.length : "?"}</b>
-          </p>
-          {params.ok && (
-            <p className="muted small">
-              price {fmtVault(String(params.value.price_per_gb_uvault))} VAULT per GB · proof every {params.value.proof_interval_blocks} blocks · accept within {params.value.accept_timeout_blocks} blocks
-            </p>
+      <section className="hero">
+        <p className="eyebrow">VaultChain explorer</p>
+        <h1>Check that your files are safely stored.</h1>
+        <p className="lead">
+          Look up any file, storage deal, provider or wallet on the VaultChain devnet. Everything here is public and read-only, so you don&apos;t need to sign in.
+        </p>
+        <SearchBox big />
+        <p className="muted small" style={{ marginTop: 10 }}>
+          Try a wallet address (<code>vault1…</code>), a deal number (<code>3</code>), a file name or a file ID. Press <kbd>/</kbd> anywhere to jump to search.
+        </p>
+      </section>
+
+      <div className="page-head" style={{ marginTop: 26, marginBottom: 10 }}>
+        <h2 style={{ margin: 0 }}>Network health</h2>
+        <AutoRefresh seconds={10} />
+      </div>
+      <div className={`health ${health.level}`} role="status">
+        <span className="ico" aria-hidden="true">{icon}</span>
+        <div>
+          <strong>{health.headline}</strong>
+          {health.details.map((d) => (
+            <p key={d}>{d}</p>
+          ))}
+        </div>
+      </div>
+      {!info.ok ? <ErrorBox error={info.error} what="the latest block" /> : null}
+      <div className="grid cols-4" style={{ marginBottom: 18 }}>
+        <Stat k={<Jargon k="height">Latest block</Jargon>} v={height !== undefined ? height.toLocaleString("en-US") : "–"} note={info.ok ? `Network ${info.value.chainId}` : undefined} />
+        <Stat k={<Jargon k="provider">Storage providers</Jargon>} v={P.filter((p) => p.status === "active").length} note={`${P.length} registered`} to="/providers" />
+        <Stat k="Files stored" v={M.length} note={fmtBytes(stored)} to="/files" />
+        <Stat k={<Jargon k="deal">Active deals</Jargon>} v={open} note={`${D.length} in total`} to="/deals" />
+      </div>
+      {pstat ? null : <p className="muted small">The reference storage provider is not answering right now, so downloads may be unavailable for a moment.</p>}
+
+      <h2>What you can do here</h2>
+      <div className="grid cols-4" style={{ marginBottom: 22 }}>
+        <Link className="tile" href="/files">
+          <span className="e" aria-hidden="true">📄</span>
+          <span className="t">Find a file</span>
+          <span className="d">Browse uploads, see who owns them, their size and whether they are encrypted.</span>
+        </Link>
+        <Link className="tile" href="/deals">
+          <span className="e" aria-hidden="true">🤝</span>
+          <span className="t">Check a file&apos;s health</span>
+          <span className="d">Open a storage deal to see its copies, recent proofs and when it expires.</span>
+        </Link>
+        <Link className="tile" href="/providers">
+          <span className="e" aria-hidden="true">🖥</span>
+          <span className="t">See who stores files</span>
+          <span className="d">Compare storage providers by capacity, status and the deals they hold.</span>
+        </Link>
+        <Link className="tile" href="/account">
+          <span className="e" aria-hidden="true">👤</span>
+          <span className="t">Look up a wallet</span>
+          <span className="d">Balance, files and deals for any address.</span>
+        </Link>
+      </div>
+
+      <div className="grid cols-2">
+        <Card title="Recent activity" id="recent">
+          {events.length ? (
+            <ul className="results">
+              {events.map((e, i) => (
+                <li key={i}>
+                  <Link href={e.to}>
+                    <span>
+                      {e.text}
+                      <small>{height !== undefined ? fmtAgo(height - e.h) : `block ${e.h}`}</small>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">Nothing has happened on the devnet yet. <a href={SITES.upload}>Upload the first file</a>.</p>
           )}
-          <p className="muted small">
-            provider endpoint: {pstat ? `${pstat.status}, ${pstat.version}, holds ${pstat.objects} object(s)` : "unreachable"}
+          <p className="muted small" style={{ marginTop: 10 }}>The node has no block list, so this is built from the newest files, deals and proofs.</p>
+        </Card>
+        <Card title="Want to store a file yourself?" id="start">
+          <ol className="step-list">
+            <li>
+              <a href={SITES.upload}>Open the upload app</a> and create a profile (keys stay in your browser).
+            </li>
+            <li>Get free devnet VAULT with one click.</li>
+            <li>Drop a file, choose private or public, and confirm.</li>
+            <li>Come back here to watch your file&apos;s <Jargon k="proof">storage proofs</Jargon> roll in.</li>
+          </ol>
+          <p className="row" style={{ marginTop: 14 }}>
+            <a className="btn primary" href={SITES.upload}>Start uploading ↗</a>
+            <a className="btn" href={SITES.vault}>Open the web vault ↗</a>
           </p>
+          {params.ok ? (
+            <p className="muted small" style={{ marginTop: 12 }}>
+              Pricing: {vault(String(params.value.price_per_gb_uvault))} per GiB per 1,000 blocks (about 50 minutes). Proofs are due every {params.value.proof_interval_blocks} blocks.{" "}
+              <Link href="/glossary">What do these words mean?</Link>
+            </p>
+          ) : null}
+          <p className="muted small">Providers online: {P.filter((p) => p.status === "active").length ? <>{P.filter((p) => p.status === "active").slice(0, 3).map((p) => <span key={p.address}><Addr a={p.address} link={false} n={6} />{" "}</span>)}</> : "none"}</p>
         </Card>
       </div>
-      <Card title="Recent on-chain activity">
-        {events.length === 0 ? (
-          <Empty>No activity yet.</Empty>
-        ) : (
-          <table className="t">
-            <thead>
-              <tr>
-                <th>Height</th>
-                <th>Kind</th>
-                <th>What</th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.slice(0, 15).map((e, i) => (
-                <tr key={i}>
-                  <td className="mono">{e.height}</td>
-                  <td>
-                    <Badge status={e.kind} />
-                  </td>
-                  <td>{e.node}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        <p className="muted small">The node exposes no block-listing endpoint, so this feed is built from manifests, deals and storage proofs, newest first.</p>
-      </Card>
     </>
   );
 }

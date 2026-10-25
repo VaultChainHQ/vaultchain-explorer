@@ -4,17 +4,22 @@ Read-only explorer for the [VaultChain](https://github.com/VaultChainHQ/vaultcha
 
 Related repositories: [vaultchain](https://github.com/VaultChainHQ/vaultchain) (the chain, provider and CLI) · **vaultchain-explorer** (this repo) · [vaultchain-upload](https://github.com/VaultChainHQ/vaultchain-upload) (browser-signing upload site). Also: [vaultchain-web](https://github.com/VaultChainHQ/vaultchain-web) (site, docs hub and a profile vault).
 
-## Pages
+## What it does
+
+An explorer for people who are not blockchain experts: everything is shown in plain language (VAULT amounts, file sizes, "about 8 hours", health verdicts) and the jargon has tooltips and a glossary. See [docs/UX-AUDIT.md](docs/UX-AUDIT.md) for the audit behind the design.
 
 | Route | Shows |
 | --- | --- |
-| `/` | chain id, node version, live height (polled every 3 s), network totals, storage parameters, provider endpoint health, recent on-chain activity |
-| `/providers`, `/providers/[address]` | registered storage providers (status, endpoint, free / capacity, collateral) and their deals |
-| `/deals`, `/deals/[id]` | deals (filter by status); per deal: payment, heights, replicas with status, acceptance height, last proven height, missed proofs, and recent storage proofs |
-| `/files`, `/files/[root]` | committed manifests (name, size, type, owner, encryption flag); per file: deals and access grants |
-| `/account`, `/account/[address]` | balance lookup, nonce, files owned and deals opened by any address |
-| `/tx/[hash]` | a transaction record |
-| `/search?q=` | the header search box: `vault1…` address, 64-hex manifest root or tx hash, or a deal id |
+| `/` | network health at a glance, four stats, "what you can do here", recent activity, and the path to uploading a file |
+| `/search?q=` and the header box | one smart search for an address, deal number, file ID (or prefix), transaction hash, file name or provider endpoint, with suggestions and helpful no-result messages |
+| `/files`, `/files/[root]` | files with privacy/name filters, sorting and paging; per file: details, encryption badge, deals and copy health, who can read it, how to download, deep link into the upload app |
+| `/deals`, `/deals/[id]` | deals with status chips and health; per deal: summary, timeline, copies and their proof status, recent proofs |
+| `/providers`, `/providers/[address]` | providers with space used, active deals, collateral; per provider: deals held and copy health |
+| `/account`, `/account/[address]` | balance, files and deals of any address ("Connect your vault" in the header remembers *your* public address in this browser) |
+| `/tx/[hash]` | a transaction in plain language, with the raw JSON underneath |
+| `/glossary` | the words used here, explained |
+
+Shared with the other VaultChain sites: brand, cross-site navigation, dark/light theme, favicon and social image. Pages auto-refresh (pause any time), show skeletons while loading, an offline banner and an in-page message when the node is unreachable.
 
 ### Limitations
 
@@ -24,7 +29,7 @@ Related repositories: [vaultchain](https://github.com/VaultChainHQ/vaultchain) (
 
 ## How it reads the chain
 
-Pages are server components that call the node REST API on the server (revalidated every 5 s), so the node's CORS settings do not matter and the browser never needs the node URL. The one client component (live height) calls `/api/node/*`, a GET-only route that forwards a whitelist of read-only node paths (no transaction submission).
+Pages are server components that call the node REST API on the server (revalidated every 5 s), so the node's CORS settings do not matter and the browser never needs the node URL. `/api/search` serves the search suggestions, and `/api/node/*`, is a GET-only route that forwards a whitelist of read-only node paths (no transaction submission).
 
 ## Run locally
 
@@ -49,7 +54,9 @@ The build does not contact the devnet (every data page is rendered on request), 
 
 ## Tests
 
-`npm test` covers amount / size formatting, search-box routing and the proxy whitelist. Pages were additionally smoke tested against the live devnet (all routes return 200 with data, unknown ids return 404, `/api/node/vaultchain/txs` is refused).
+`npm test` covers amount / size / time formatting, query parsing and search routing (with fake loaders), health verdicts, sorting and paging, transaction summaries and the proxy whitelist.
+
+`npm run e2e` drives a headless Chrome through search, navigation, theme, tooltips, copy buttons and the mobile layout against any running instance (`BASE=https://vaultchain-explorer.vercel.app npm run e2e`; needs `npm i --no-save playwright-core` and a Chrome binary). It is not part of CI.
 
 ## License
 

@@ -1,40 +1,38 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import "./globals.css";
+import type { Metadata, Viewport } from "next";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { SiteFooter, SiteHeader } from "@/components/site";
+import { THEME_SCRIPT } from "@/components/ThemeToggle";
+import "./brand.css";
+import "./explorer.css";
 
 export const metadata: Metadata = {
-  title: "VaultChain Explorer (devnet)",
-  description: "Read-only explorer for the VaultChain devnet: blocks, providers, deals, files and balances.",
+  metadataBase: new URL("https://vaultchain-explorer.vercel.app"),
+  title: { default: "VaultChain Explorer: look up files, deals and storage proofs", template: "%s · VaultChain Explorer" },
+  description: "Search the VaultChain devnet: find a file, check whether it is safely stored, see who holds it and when its storage runs out. Read-only; no sign-in.",
+  openGraph: {
+    title: "VaultChain Explorer",
+    description: "Look up files, storage deals, providers and proofs on the VaultChain devnet.",
+    type: "website",
+    siteName: "VaultChain",
+  },
+  twitter: { card: "summary_large_image", title: "VaultChain Explorer", description: "Look up files, storage deals, providers and proofs on the VaultChain devnet." },
 };
+
+export const viewport: Viewport = { themeColor: "#07090d", colorScheme: "dark light" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
-        <header className="top">
-          <div className="wrap bar">
-            <Link href="/" className="brand">
-              VaultChain Explorer
-            </Link>
-            <nav>
-              <Link href="/">Home</Link>
-              <Link href="/providers">Providers</Link>
-              <Link href="/deals">Deals</Link>
-              <Link href="/files">Files</Link>
-              <Link href="/account">Account</Link>
-            </nav>
-            <form action="/search" className="search">
-              <input name="q" placeholder="address, manifest root, deal id" aria-label="Search" />
-              <button type="submit">Search</button>
-            </form>
-          </div>
-        </header>
-        <main className="wrap">{children}</main>
-        <footer className="wrap muted small">
-          Read-only devnet explorer. Data comes live from the public devnet and disappears if it is reset. ·{" "}
-          <a href="https://github.com/VaultChainHQ/vaultchain">vaultchain</a> · <a href="https://github.com/VaultChainHQ/vaultchain-explorer">vaultchain-explorer</a> ·{" "}
-          <a href="https://github.com/VaultChainHQ/vaultchain-upload">vaultchain-upload</a>
-        </footer>
+        <OfflineBanner />
+        <SiteHeader />
+        <main id="main" className="wrap page">
+          {children}
+        </main>
+        <SiteFooter />
       </body>
     </html>
   );

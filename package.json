@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "e2e": "node e2e/explorer.mjs"
   },
   "engines": {
     "node": ">=20.9"
