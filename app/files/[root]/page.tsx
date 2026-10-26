@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { CopyButton } from "@/components/CopyButton";
-import { Addr, Card, Empty, EncBadge, ErrorBox, HealthPill, Jargon, PageHead, StatusBadge } from "@/components/ui";
+import { Addr, Card, Empty, EncBadge, ErrorBox, HealthPill, Jargon, TermNote, PageHead, StatusBadge } from "@/components/ui";
 import { NotFound, getDeals, getGrants, getManifest, getNodeInfo, getParams, getTx, settle } from "@/lib/api";
 import { fmtAgo, fmtBytes, fmtWhen, vault } from "@/lib/format";
 import { dealHealth } from "@/lib/health";
@@ -61,7 +61,7 @@ export default async function FilePage({ params }: { params: Promise<{ root: str
 
       {headline ? (
         <div className={`health ${headline.level}`} role="status">
-          <span className="ico" aria-hidden="true">{{ ok: "✅", warn: "⚠️", bad: "⛔", idle: "ℹ️" }[headline.level]}</span>
+          <span className="ico" aria-hidden="true">{{ ok: "✅", warn: "⚠️", bad: "⛔", idle: "ℹ️", info: "ℹ️" }[headline.level]}</span>
           <div>
             <strong>{headline.level === "ok" ? "This file is safely stored" : headline.label}</strong>
             <p>{copies} healthy {copies === 1 ? "copy" : "copies"} held by storage providers. {headline.why}</p>
@@ -132,7 +132,7 @@ export default async function FilePage({ params }: { params: Promise<{ root: str
                     <td data-label="Health"><HealthPill h={dealHealth(d, height, sp)} /></td>
                     <td data-label="Paid">{vault(d.payment.amount)}</td>
                     <td data-label="Copies">{(d.replicas ?? []).filter((r) => r.status === "active").length} of {d.replication}</td>
-                    <td data-label="Ends">{["closed", "failed", "cancelled"].includes(d.status) ? "Ended" : fmtWhen(d.expire_height, height)}</td>
+                    <td data-label="Ends">{["closed", "failed", "cancelled"].includes(d.status) ? "Ended" : <>{fmtWhen(d.expire_height, height)} <TermNote d={d} /></>}</td>
                   </tr>
                 ))}
               </tbody>

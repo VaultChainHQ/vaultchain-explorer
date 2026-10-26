@@ -1,7 +1,7 @@
 import type { Deal, Provider, Replica, StorageParams } from "./api";
 import { fmtAgo, fmtDuration } from "./format";
 
-export type Level = "ok" | "warn" | "bad" | "idle";
+export type Level = "ok" | "warn" | "bad" | "idle" | "info";
 export interface Health {
   level: Level;
   label: string;
@@ -42,7 +42,7 @@ export function replicaHealth(r: Replica, height: number | undefined, p: P): Hea
   return { level: "ok", label: "Healthy", why: `The provider proved it still holds the file ${fmtAgo(lag)}.` };
 }
 
-const rank: Record<Level, number> = { ok: 0, idle: 1, warn: 2, bad: 3 };
+const rank: Record<Level, number> = { ok: 0, idle: 1, info: 1, warn: 2, bad: 3 };
 
 export function dealHealth(d: Deal, height: number | undefined, p: P): Health {
   switch (d.status) {
@@ -68,6 +68,24 @@ export function dealHealth(d: Deal, height: number | undefined, p: P): Health {
   }
   const slow = reps.some((r) => r.level !== "ok");
   return { level: slow ? "warn" : "ok", label: slow ? "Healthy, one copy slow" : "Healthy", why: `${good} of ${d.replication} copies are proven healthy (at least ${d.min_replicas} needed).` };
+}
+
+/** A term this short (about 4 hours or less) is what people pick for tests. It is information, never a problem. */
+export const SHORT_TERM_BLOCKS = 5000;
+
+/**
+ * A neutral note for deals that were bought for a short time. A short term is not unhealthy: the chain does exactly what was paid for,
+ * so it is shown as information and never counted as needing attention. Returns undefined for normal terms and for finished deals.
+ */
+export function termNote(d: Pick<Deal, "status" | "start_height" | "expire_height">): Health | undefined {
+  if (d.status !== "open" && d.status !== "pending") return undefined;
+  const span = d.expire_height - d.start_height;
+  if (span > SHORT_TERM_BLOCKS) return undefined;
+  return {
+    level: "info",
+    label: "Short test term",
+    why: `This deal paid for ${fmtDuration(Math.max(1, span))} of storage, which is typical for a quick test. It is not a fault; when the term ends the file is simply no longer kept unless it is stored again.`,
+  };
 }
 
 export interface NetworkHealth {

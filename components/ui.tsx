@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { Health, Level } from "@/lib/health";
+import type { Deal } from "@/lib/api";
+import { termNote, type Health, type Level } from "@/lib/health";
 import { href as mkHref, short, type Page } from "@/lib/format";
 import { CopyButton } from "./CopyButton";
 import { Term } from "./Term";
@@ -34,6 +35,12 @@ export function HealthPill({ h }: { h: Health }) {
       <span className="sr-only">: {h.why}</span>
     </span>
   );
+}
+
+/** A small neutral "Short test term" pill for deals bought for only a few hours. Renders nothing for normal terms. */
+export function TermNote({ d }: { d: Pick<Deal, "status" | "start_height" | "expire_height"> }) {
+  const n = termNote(d);
+  return n ? <HealthPill h={n} /> : null;
 }
 
 export function ErrorBox({ error, what = "data" }: { error: string; what?: string }) {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AutoRefresh } from "@/components/AutoRefresh";
-import { Addr, Chips, Empty, ErrorBox, HealthPill, Jargon, PageHead, Pager, SortTh, StatusBadge } from "@/components/ui";
+import { Addr, Chips, Empty, ErrorBox, HealthPill, Jargon, TermNote, PageHead, Pager, SortTh, StatusBadge } from "@/components/ui";
 import { getDeals, getManifests, getNodeInfo, getParams, settle } from "@/lib/api";
 import { fmtBytes, fmtWhen, href, paginate, vault } from "@/lib/format";
 import { dealHealth } from "@/lib/health";
@@ -77,7 +77,7 @@ export default async function Deals({ searchParams }: { searchParams: Promise<Re
                     <td className="num" data-label="Paid">{vault(d.payment.amount)}</td>
                     <td data-label="Copies">{live} of {d.replication}</td>
                     <td data-label="Health">{params.ok ? <HealthPill h={dealHealth(d, height, params.value)} /> : "–"}</td>
-                    <td data-label="Ends">{["closed", "failed", "cancelled"].includes(d.status) ? "Ended" : fmtWhen(d.expire_height, height)}</td>
+                    <td data-label="Ends">{["closed", "failed", "cancelled"].includes(d.status) ? "Ended" : <>{fmtWhen(d.expire_height, height)} <TermNote d={d} /></>}</td>
                   </tr>
                 );
               })}

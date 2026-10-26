@@ -37,7 +37,7 @@ export default async function Home() {
     .sort((a, b) => b.h - a.h)
     .slice(0, 8);
 
-  const icon = { ok: "✅", warn: "⚠️", bad: "⛔", idle: "•" }[health.level];
+  const icon = { ok: "✅", warn: "⚠️", bad: "⛔", idle: "•", info: "ℹ️" }[health.level];
   return (
     <>
       <section className="hero">

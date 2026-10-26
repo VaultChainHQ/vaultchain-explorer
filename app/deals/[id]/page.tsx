@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { CopyButton } from "@/components/CopyButton";
-import { Addr, Card, Empty, EncBadge, ErrorBox, HealthPill, Jargon, PageHead, Root, StatusBadge } from "@/components/ui";
+import { Addr, Card, Empty, EncBadge, ErrorBox, HealthPill, Jargon, TermNote, PageHead, Root, StatusBadge } from "@/components/ui";
 import { NotFound, getDeal, getManifest, getNodeInfo, getParams, getProofs, settle } from "@/lib/api";
 import { fmtAgo, fmtBytes, fmtDuration, fmtWhen, vault } from "@/lib/format";
 import { dealHealth, replicaHealth } from "@/lib/health";
@@ -60,7 +60,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       />
 
       <div className={`health ${health.level}`} role="status">
-        <span className="ico" aria-hidden="true">{{ ok: "✅", warn: "⚠️", bad: "⛔", idle: "ℹ️" }[health.level]}</span>
+        <span className="ico" aria-hidden="true">{{ ok: "✅", warn: "⚠️", bad: "⛔", idle: "ℹ️", info: "ℹ️" }[health.level]}</span>
         <div>
           <strong>{health.label}</strong>
           <p>{health.why}</p>
@@ -86,7 +86,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               {d.replication} requested, at least {d.min_replicas} must stay healthy
             </dd>
             <dt>Term</dt>
-            <dd>{fmtDuration(span)} (blocks {d.start_height.toLocaleString("en-US")} – {d.expire_height.toLocaleString("en-US")})</dd>
+            <dd>{fmtDuration(span)} (blocks {d.start_height.toLocaleString("en-US")} – {d.expire_height.toLocaleString("en-US")}) <TermNote d={d} /></dd>
             <dt>Type</dt>
             <dd>{d.class}</dd>
           </dl>
